@@ -1,0 +1,6 @@
+build/
+.idea/
+sdkconfig
+*.bin
+*.elf
+*.map
