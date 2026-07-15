@@ -1,6 +1,9 @@
 build/
 .idea/
+cmake-build-idf-5.3.5
 sdkconfig
+sdkconfig.old
 *.bin
 *.elf
 *.map
+esp-idf

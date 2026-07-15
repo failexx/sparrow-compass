@@ -17,17 +17,21 @@
 #define BUTTON_LEFT_GPIO GPIO_NUM_4
 #define BUTTON_RIGHT_GPIO GPIO_NUM_18
 
+volatile int* button_ptr;
+
 #define DEBOUNCE_DELAY_US 200000ULL  // Debounce delay in microseconds (200 ms)
 
 static volatile uint64_t last_isr_time = 0;
 static volatile uint32_t counter = 0;
 static QueueHandle_t button_queue;
 
+
 // Interrupt Service Routine (ISR) for button press, placed in IRAM for low latency
 static void IRAM_ATTR button_isr(void *arg) {
     uint64_t now = esp_timer_get_time(); // Get current time in microseconds
     // Check if debounce period has passed, then process the button press
     if (now - last_isr_time > DEBOUNCE_DELAY_US) {
+        button_ptr = (int*)arg;
         counter++;
         uint32_t cnt = counter;
         BaseType_t higher_priority_task_woken = pdFALSE;
@@ -99,11 +103,11 @@ void button_main(void) {
     gpio_install_isr_service(0);
 
     // Add ISR handler for button
-    gpio_isr_handler_add(BUTTON_MID_GPIO, button_isr, NULL);
-    gpio_isr_handler_add(BUTTON_UP_GPIO, button_isr, NULL);
-    gpio_isr_handler_add(BUTTON_DOWN_GPIO, button_isr, NULL);
-    gpio_isr_handler_add(BUTTON_LEFT_GPIO, button_isr, NULL);
-    gpio_isr_handler_add(BUTTON_RIGHT_GPIO, button_isr, NULL);
+    gpio_isr_handler_add(BUTTON_MID_GPIO, button_isr, (void*)BUTTON_MID_GPIO);
+    gpio_isr_handler_add(BUTTON_UP_GPIO, button_isr, (void*)BUTTON_UP_GPIO);
+    gpio_isr_handler_add(BUTTON_DOWN_GPIO, button_isr, (void*)BUTTON_DOWN_GPIO);
+    gpio_isr_handler_add(BUTTON_LEFT_GPIO, button_isr, (void*)BUTTON_LEFT_GPIO);
+    gpio_isr_handler_add(BUTTON_RIGHT_GPIO, button_isr, (void*)BUTTON_RIGHT_GPIO);
 
     // Variable to receive counter from queue
     uint32_t button_counter;
@@ -112,7 +116,24 @@ void button_main(void) {
     while (1) {
         // Wait indefinitely for an item in the queue
         if (xQueueReceive(button_queue, &button_counter, portMAX_DELAY)) {
-            printf("Button pressed %lu times.\n", button_counter);
+            printf("Knappen sa klick %lu times.\n", button_counter);
+            if ((int)button_ptr == BUTTON_MID_GPIO) {
+                printf("Mid button pressed.\n");
+                button_ptr = NULL;
+            } else if ((int)button_ptr == BUTTON_UP_GPIO) {
+                printf("Up button pressed.\n");
+                button_ptr = NULL;
+            } else if ((int)button_ptr == BUTTON_DOWN_GPIO) {
+                printf("Down button pressed.\n");
+                button_ptr = NULL;
+            } else if ((int)button_ptr == BUTTON_LEFT_GPIO) {
+                printf("Left button pressed.\n");
+                button_ptr = NULL;
+            } else if ((int)button_ptr == BUTTON_RIGHT_GPIO) {
+                printf("Right button pressed.\n");
+                button_ptr = NULL;
+                //CALL ON OLED FUNCTION TO CHANGE DISPLAY
+            }
         }
     }
 }
